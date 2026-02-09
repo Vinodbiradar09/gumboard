@@ -19,6 +19,11 @@ const schema = z.object({
   // NextAuth
   AUTH_URL: z.string().optional(),
   AUTH_SECRET: z.string(),
+  BASE_URL : z.string(),
+  QSTASH_URL : z.string(),
+  QSTASH_TOKEN : z.string(),
+  QSTASH_CURRENT_SIGNING_KEY : z.string(),
+  QSTASH_NEXT_SIGNING_KEY : z.string(),
 });
 
 export const env = schema.parse(process.env);
