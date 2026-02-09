@@ -23,13 +23,7 @@ const createOrganization = async (orgName: string, teamEmails: string[]) => {
     throw new Error("Organization name is required");
   }
   const userId = session.user.id;
-  const uniqueEmails = [
-    ...new Set(
-      teamEmails
-        .map(e => e.trim().toLowerCase())
-        .filter(Boolean)
-    )
-  ];
+  const uniqueEmails = [...new Set(teamEmails.map((e) => e.trim().toLowerCase()).filter(Boolean))];
 
   const organization = await db.$transaction(async (tx) => {
     const org = await tx.organization.create({
@@ -46,14 +40,16 @@ const createOrganization = async (orgName: string, teamEmails: string[]) => {
     return org;
   });
 
-  client.publishJSON({
-    url : `${env.BASE_URL}/api/organization/invites/worker`,
-    body : {
-      organization,
-      user : session.user,
-      emails : uniqueEmails,
-    }
-  }).catch(console.error);
+  client
+    .publishJSON({
+      url: `${env.BASE_URL}/api/organization/invites/worker`,
+      body: {
+        organization,
+        user: session.user,
+        emails: uniqueEmails,
+      },
+    })
+    .catch(console.error);
   return {
     success: true,
     organization,

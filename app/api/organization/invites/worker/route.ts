@@ -6,28 +6,28 @@ import { Resend } from "resend";
 
 const resend = new Resend(env.AUTH_RESEND_KEY);
 
-async function handler(request : Request) {
-    try {
-        const { organization , user , emails} = await request.json();
-        if (!Array.isArray(emails) || emails.length === 0) {
-        return NextResponse.json({
-                message: "please send emails in array",
-                success: false,
-            });
-        }
-        const invites = await db.organizationInvite.createManyAndReturn({
-            data : emails.map((email : string) => ({
-                email,
-                organizationId : organization.id,
-                invitedBy : user.id,
-            })),
-            skipDuplicates : true,
-        });
-        const batch = invites.map(( invite )=>({
-            from : env.EMAIL_FROM,
-            to : invite.email,
-            subject : `${user.name} invited you to join ${organization.name}`,
-            html: `
+async function handler(request: Request) {
+  try {
+    const { organization, user, emails } = await request.json();
+    if (!Array.isArray(emails) || emails.length === 0) {
+      return NextResponse.json({
+        message: "please send emails in array",
+        success: false,
+      });
+    }
+    const invites = await db.organizationInvite.createManyAndReturn({
+      data: emails.map((email: string) => ({
+        email,
+        organizationId: organization.id,
+        invitedBy: user.id,
+      })),
+      skipDuplicates: true,
+    });
+    const batch = invites.map((invite) => ({
+      from: env.EMAIL_FROM,
+      to: invite.email,
+      subject: `${user.name} invited you to join ${organization.name}`,
+      html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>You&apos;re invited to join ${organization.name}!</h2>
               <p>${user.name} (${user.email}) has invited you to join their organization on Board.</p>
@@ -41,17 +41,20 @@ async function handler(request : Request) {
               </p>
             </div>
           `,
-        }))
-        await resend.batch.send(batch);
-        return NextResponse.json({ success: true , message : "the organization invitation has been sent"}, {status : 200});
-    } catch (error) {
-        console.log("error in qstash queue", error);
-        return NextResponse.json(
-        {
-            message: "qstash server failed",
-            success: false,
-        },
-        { status: 500 },
+    }));
+    await resend.batch.send(batch);
+    return NextResponse.json(
+      { success: true, message: "the organization invitation has been sent" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.log("error in qstash queue", error);
+    return NextResponse.json(
+      {
+        message: "qstash server failed",
+        success: false,
+      },
+      { status: 500 }
     );
   }
 }
