@@ -20,10 +20,10 @@ const schema = z.object({
   AUTH_URL: z.string().optional(),
   AUTH_SECRET: z.string(),
   BASE_URL: z.string(),
-  QSTASH_URL: z.string(),
-  QSTASH_TOKEN: z.string(),
-  QSTASH_CURRENT_SIGNING_KEY: z.string(),
-  QSTASH_NEXT_SIGNING_KEY: z.string(),
+  QSTASH_URL: z.string().optional(),
+  QSTASH_TOKEN: z.string().optional(),
+  QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
+  QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
 });
 
 export const env = schema.parse(process.env);
