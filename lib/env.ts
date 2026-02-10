@@ -19,7 +19,7 @@ const schema = z.object({
   // NextAuth
   AUTH_URL: z.string().optional(),
   AUTH_SECRET: z.string(),
-  BASE_URL: z.string(),
+  BASE_URL: z.string().optional(),
   QSTASH_URL: z.string().optional(),
   QSTASH_TOKEN: z.string().optional(),
   QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
