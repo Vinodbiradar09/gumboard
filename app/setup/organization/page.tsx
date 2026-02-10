@@ -2,79 +2,59 @@ import { auth } from "@/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { Resend } from "resend";
+// import { Resend } from "resend";
 import OrganizationSetupForm from "./form";
 import { env } from "@/lib/env";
-import { headers } from "next/headers";
-import { getBaseUrl } from "@/lib/utils";
+// import { headers } from "next/headers";
+// import { getBaseUrl } from "@/lib/utils";
+import { client } from "@/lib/qstash";
 
-const resend = new Resend(env.AUTH_RESEND_KEY);
+// const resend = new Resend(env.AUTH_RESEND_KEY);
 
-async function createOrganization(orgName: string, teamEmails: string[]) {
+const createOrganization = async (orgName: string, teamEmails: string[]) => {
   "use server";
 
-  const baseUrl = getBaseUrl(await headers());
   const session = await auth();
-  if (!session?.user?.id) {
+  if (!session || !session.user?.id) {
     throw new Error("Not authenticated");
   }
 
   if (!orgName?.trim()) {
     throw new Error("Organization name is required");
   }
+  const userId = session.user.id;
+  const uniqueEmails = [...new Set(teamEmails.map((e) => e.trim().toLowerCase()).filter(Boolean))];
 
-  const organization = await db.organization.create({
-    data: {
-      name: orgName.trim(),
-    },
+  const organization = await db.$transaction(async (tx) => {
+    const org = await tx.organization.create({
+      data: { name: orgName.trim() },
+    });
+
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        organizationId: org.id,
+        isAdmin: true,
+      },
+    });
+    return org;
   });
 
-  await db.user.update({
-    where: { id: session.user.id },
-    data: {
-      organizationId: organization.id,
-      isAdmin: true,
-    },
-  });
-
-  if (teamEmails.length > 0) {
-    for (const email of teamEmails) {
-      try {
-        const invite = await db.organizationInvite.create({
-          data: {
-            email,
-            organizationId: organization.id,
-            invitedBy: session.user.id!,
-          },
-        });
-
-        await resend.emails.send({
-          from: env.EMAIL_FROM!,
-          to: email,
-          subject: `${session.user.name} invited you to join ${orgName}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2>You&apos;re invited to join ${orgName}!</h2>
-              <p>${session.user.name} (${session.user.email}) has invited you to join their organization on Gumboard.</p>
-              <p>Click the link below to accept the invitation:</p>
-              <a href="${baseUrl}/invite/accept?token=${invite.id}"
-                 style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                Accept Invitation
-              </a>
-              <p style="margin-top: 20px; color: #666;">
-                If you don&apos;t want to receive these emails, please ignore this message.
-              </p>
-            </div>
-          `,
-        });
-      } catch (error) {
-        console.error(`Failed to send invite to ${email}:`, error);
-      }
-    }
-  }
-
-  return { success: true, organization };
-}
+  client
+    .publishJSON({
+      url: `${env.BASE_URL}/api/organization/invites/worker`,
+      body: {
+        organization,
+        user: session.user,
+        emails: uniqueEmails,
+      },
+    })
+    .catch(console.error);
+  return {
+    success: true,
+    organization,
+  };
+};
 
 export default async function OrganizationSetup() {
   const session = await auth();

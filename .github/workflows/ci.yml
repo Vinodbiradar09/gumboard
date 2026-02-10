@@ -38,7 +38,7 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gumboard_test
       EMAIL_FROM: noreply@example.com
       AUTH_RESEND_KEY: dummy-resend-key
-
+      BASE_URL: https://gumboard.com
     steps:
       - uses: actions/checkout@v4
 
